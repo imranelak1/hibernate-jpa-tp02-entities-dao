@@ -15,6 +15,8 @@ mvn compile exec:java
 
 Les résultats enregistrés donnent **11 tests réussis, sans échec ni erreur**, dont la vérification qu'un email dupliqué ne laisse aucune modification partielle.
 
+Les captures de la démo et des tests viennent d’exécutions réelles dans le terminal.
+
 ![Résultats de la démo](screenshots/results.png)
 
 ![Résultats des tests](screenshots/tests.png)
