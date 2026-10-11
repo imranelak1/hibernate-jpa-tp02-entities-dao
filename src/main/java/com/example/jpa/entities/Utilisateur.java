@@ -8,12 +8,14 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 
+/** Utilisateur dont l'email est unique en base et la salle est facultative. */
 @Entity
 public class Utilisateur {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column(nullable = false)
     private String nom;
+    // La contrainte SQL protège aussi contre les doublons entre deux transactions.
     @Column(nullable = false, unique = true)
     private String email;
     @ManyToOne @JoinColumn(name = "salle_id")

@@ -6,6 +6,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 
+/** Salle identifiée par un nom unique, avec une capacité strictement positive. */
 @Entity
 public class Salle {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)

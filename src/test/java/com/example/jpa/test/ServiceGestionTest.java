@@ -1,8 +1,14 @@
 package com.example.jpa.test;
 
+import com.example.jpa.dao.SalleDao;
+import com.example.jpa.dao.UtilisateurDao;
 import com.example.jpa.entities.Salle;
 import com.example.jpa.entities.Utilisateur;
+import com.example.jpa.persistence.JpaContext;
 import com.example.jpa.service.ServiceGestion;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -69,5 +75,115 @@ public class ServiceGestionTest {
         assertThrows(IllegalArgumentException.class, () -> new Utilisateur("", "a@example.com", null));
         assertThrows(RuntimeException.class, () -> service.ajouterSalle(new Salle()));
         assertTrue(service.listerSalles().isEmpty());
+    }
+
+    /** Verifie la liste et le comptage pendant un cycle CRUD complet. */
+    @Test public void testGenericDaoFindAllEtCountPendantLeCrud() {
+        EntityManagerFactory factory = nouvelleFactoryDao();
+        EntityManager em = factory.createEntityManager();
+        try {
+            SalleDao dao = new SalleDao(em);
+            assertEquals(0L, dao.count());
+            assertTrue(dao.findAll().isEmpty());
+
+            Salle a = new Salle("A", 10), b = new Salle("B", 20);
+            dao.create(a);
+            dao.create(b);
+            assertEquals(2L, dao.count());
+            assertEquals(a.getId(), dao.findAll().get(0).getId());
+            assertEquals(b.getId(), dao.findAll().get(1).getId());
+
+            em.clear(); // Le service utilise aussi des entites detachees entre les appels.
+            a.setCapacite(15);
+            dao.update(a);
+            em.clear();
+            assertEquals(15, dao.find(a.getId()).getCapacite());
+            assertEquals(2L, dao.count());
+
+            dao.delete(a);
+            assertNull(dao.find(a.getId()));
+            assertEquals(1L, dao.count());
+            assertEquals(b.getId(), dao.findAll().get(0).getId());
+            dao.delete(b);
+            assertEquals(0L, dao.count());
+            assertTrue(dao.findAll().isEmpty());
+        } finally {
+            em.close();
+            factory.close();
+        }
+    }
+
+    /** Un email duplique annule l'ecriture et laisse la DAO utilisable. */
+    @Test public void testRollbackEmailDupliqueSansModificationPartielle() {
+        EntityManagerFactory factory = nouvelleFactoryDao();
+        EntityManager em = factory.createEntityManager();
+        try {
+            UtilisateurDao dao = new UtilisateurDao(em);
+            Utilisateur alice = new Utilisateur("Alice", "alice@example.com", null);
+            dao.create(alice);
+
+            assertThrows(RuntimeException.class, () ->
+                    dao.create(new Utilisateur("Doublon", "alice@example.com", null)));
+            assertFalse(em.getTransaction().isActive());
+            assertFalse(em.contains(alice));
+            assertEquals(1L, dao.count());
+            assertEquals("Alice", dao.find(alice.getId()).getNom());
+
+            Utilisateur bob = new Utilisateur("Bob", "bob@example.com", null);
+            dao.create(bob); // Une nouvelle transaction fonctionne apres le rollback.
+            bob.setNom("Nom qui ne doit pas etre conserve");
+            bob.setEmail("alice@example.com");
+            assertThrows(RuntimeException.class, () -> dao.update(bob));
+            assertFalse(em.getTransaction().isActive());
+            assertFalse(em.contains(bob));
+
+            Utilisateur bobEnBase = dao.find(bob.getId());
+            assertEquals("Bob", bobEnBase.getNom());
+            assertEquals("bob@example.com", bobEnBase.getEmail());
+            assertEquals("Alice", dao.find(alice.getId()).getNom());
+            assertEquals("alice@example.com", dao.find(alice.getId()).getEmail());
+            assertEquals(2L, dao.count());
+            assertEquals(2, dao.findAll().size());
+
+            bobEnBase.setNom("Bob modifie");
+            dao.update(bobEnBase);
+            dao.create(new Utilisateur("Charlie", "charlie@example.com", null));
+            em.clear();
+            assertEquals("Bob modifie", dao.find(bob.getId()).getNom());
+            assertEquals(3L, dao.count());
+        } finally {
+            em.close();
+            factory.close();
+        }
+    }
+
+    private EntityManagerFactory nouvelleFactoryDao() {
+        return Persistence.createEntityManagerFactory("gestionPU", Map.of(
+                "javax.persistence.jdbc.url", "jdbc:h2:mem:dao_" + UUID.randomUUID(),
+                "hibernate.hbm2ddl.auto", "create-drop", "hibernate.show_sql", "false"));
+    }
+
+    /** Fermer un service ne doit pas fermer la factory partagee par les autres. */
+    @Test public void testFactorySingletonPartageeEntreServices() {
+        try (ServiceGestion premier = new ServiceGestion(); ServiceGestion second = new ServiceGestion()) {
+            Salle salle = new Salle("Partage_" + UUID.randomUUID(), 10);
+            try {
+                premier.ajouterSalle(salle);
+                premier.fermer();
+                assertTrue(JpaContext.getEntityManagerFactory().isOpen());
+                assertThrows(IllegalStateException.class, premier::listerSalles);
+
+                Salle retrouvee = second.trouverSalle(salle.getId());
+                assertEquals(salle.getNom(), retrouvee.getNom());
+                retrouvee.setCapacite(25);
+                second.modifierSalle(retrouvee);
+                assertEquals(25, second.trouverSalle(salle.getId()).getCapacite());
+            } finally {
+                if (salle.getId() != null && second.trouverSalle(salle.getId()) != null) {
+                    second.supprimerSalle(salle);
+                }
+            }
+        }
+        assertTrue(JpaContext.getEntityManagerFactory().isOpen());
     }
 }

@@ -1,8 +1,10 @@
 # TP 2 — Entités Salle et Utilisateur, DAO et services JPA
 
-Dans ce TP, j'ai utilisé JPA et Hibernate pour gérer des salles et des utilisateurs. Chaque utilisateur peut être associé à une salle. Le projet permet d'ajouter, rechercher, modifier et supprimer les données avec des DAO et un service de gestion.
+Dans ce TP, j'ai utilisé JPA et Hibernate pour gérer des salles et des utilisateurs. Chaque utilisateur peut être associé à une salle.
 
-J'ai aussi ajouté des recherches par capacité de salle et par nom d'utilisateur. La démo montre les opérations CRUD et le rollback en cas d'email dupliqué. À la fin, il reste une salle et deux utilisateurs.
+Le `GenericDao` regroupe le CRUD, `findAll()` et `count()`. Les services partagent la factory de `JpaContext`, avec un `EntityManager` par opération. En cas d'erreur, la DAO annule la transaction et vide le contexte.
+
+La démo montre les recherches par capacité et par nom, puis un email dupliqué refusé avec rollback. À la fin, il reste une salle et deux utilisateurs.
 
 Pour lancer le projet, il faut Java 17 et Maven. La base H2 fonctionne en mémoire.
 
@@ -11,7 +13,7 @@ mvn clean test
 mvn compile exec:java
 ```
 
-Les résultats enregistrés donnent **8 tests réussis, sans échec ni erreur**.
+Les résultats enregistrés donnent **11 tests réussis, sans échec ni erreur**, dont la vérification qu'un email dupliqué ne laisse aucune modification partielle.
 
 ![Résultats de la démo](screenshots/results.png)
 

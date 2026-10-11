@@ -3,7 +3,9 @@ package com.example.jpa;
 import com.example.jpa.entities.Salle;
 import com.example.jpa.entities.Utilisateur;
 import com.example.jpa.service.ServiceGestion;
+import com.example.jpa.persistence.JpaContext;
 
+/** Démonstration du CRUD, des recherches et du rollback sur un email dupliqué. */
 public final class App {
     private App() { }
     public static void main(String[] args) {
@@ -24,11 +26,24 @@ public final class App {
             alice.setSalle(b); service.modifierUtilisateur(alice);
             System.out.println("Mise a jour Salle A : " + service.trouverSalle(a.getId()));
             System.out.println("Alice apres changement de salle : " + service.trouverUtilisateur(alice.getId()));
-            try { service.ajouterUtilisateur(new Utilisateur("Doublon", "alice@example.com", b)); }
-            catch (RuntimeException expected) { System.out.println("Email duplique refuse : transaction annulee, utilisateurs=" + service.listerUtilisateurs().size()); }
+            long avantDoublon = service.compterUtilisateurs();
+            try {
+                service.ajouterUtilisateur(new Utilisateur("Doublon", "alice@example.com", b));
+                throw new AssertionError("L'email duplique aurait du etre refuse");
+            } catch (RuntimeException expected) {
+                // Le comptage et la relecture vérifient les données après le rollback.
+                if (service.compterUtilisateurs() != avantDoublon
+                        || !"Alice".equals(service.trouverUtilisateur(alice.getId()).getNom())) {
+                    throw new AssertionError("Le rollback n'a pas preserve les donnees", expected);
+                }
+                System.out.println("Email duplique refuse : transaction annulee, utilisateurs=" + service.compterUtilisateurs());
+                System.out.println("Rollback verifie : Alice conservee, aucun doublon en base.");
+            }
             service.supprimerUtilisateur(bob); service.supprimerSalle(a);
-            System.out.println("Apres suppression : salles=" + service.listerSalles().size() + ", utilisateurs=" + service.listerUtilisateurs().size());
+            System.out.println("Apres suppression : salles=" + service.compterSalles() + ", utilisateurs=" + service.compterUtilisateurs());
             System.out.println("TP2 RESULTAT : CRUD, ManyToOne, JPQL et rollback verifies sans EJB.");
+        } finally {
+            JpaContext.close();
         }
     }
 }
