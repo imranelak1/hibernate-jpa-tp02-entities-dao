@@ -35,33 +35,109 @@ public final class ServiceGestion implements AutoCloseable {
 
     /** Ferme l'EntityManager même si la DAO remonte une erreur après son rollback. */
     private <R> R withManager(Function<EntityManager, R> action) {
-        if (closed) throw new IllegalStateException("Le service est fermé");
+        if (closed) {
+            throw new IllegalStateException("Le service est fermé");
+        }
         EntityManager em = emf.createEntityManager();
-        try { return action.apply(em); } finally { em.close(); }
+        try {
+            return action.apply(em);
+        } finally {
+            em.close();
+        }
     }
-    public void ajouterSalle(Salle salle) { withManager(em -> { new SalleDao(em).create(salle); return null; }); }
-    public void ajouterUtilisateur(Utilisateur utilisateur) { withManager(em -> { new UtilisateurDao(em).create(utilisateur); return null; }); }
-    public Salle trouverSalle(Long id) { return withManager(em -> new SalleDao(em).find(id)); }
-    public Utilisateur trouverUtilisateur(Long id) { return withManager(em -> new UtilisateurDao(em).find(id)); }
-    public Salle modifierSalle(Salle salle) { return withManager(em -> new SalleDao(em).update(salle)); }
-    public Utilisateur modifierUtilisateur(Utilisateur utilisateur) { return withManager(em -> new UtilisateurDao(em).update(utilisateur)); }
-    public void supprimerSalle(Salle salle) { withManager(em -> { new SalleDao(em).delete(salle); return null; }); }
-    public void supprimerUtilisateur(Utilisateur utilisateur) { withManager(em -> { new UtilisateurDao(em).delete(utilisateur); return null; }); }
-    public List<Salle> listerSalles() { return withManager(em -> new SalleDao(em).findAll()); }
-    public List<Utilisateur> listerUtilisateurs() { return withManager(em -> new UtilisateurDao(em).findAll()); }
+
+    public void ajouterSalle(Salle salle) {
+        withManager(em -> {
+            new SalleDao(em).create(salle);
+            return null;
+        });
+    }
+
+    public void ajouterUtilisateur(Utilisateur utilisateur) {
+        withManager(em -> {
+            new UtilisateurDao(em).create(utilisateur);
+            return null;
+        });
+    }
+
+    public Salle trouverSalle(Long id) {
+        return withManager(em -> new SalleDao(em).find(id));
+    }
+
+    public Utilisateur trouverUtilisateur(Long id) {
+        return withManager(em -> new UtilisateurDao(em).find(id));
+    }
+
+    /** Les objets reçus sont détachés ; merge retourne leur copie persistée. */
+    public Salle modifierSalle(Salle salle) {
+        return withManager(em -> new SalleDao(em).update(salle));
+    }
+
+    public Utilisateur modifierUtilisateur(Utilisateur utilisateur) {
+        return withManager(em -> new UtilisateurDao(em).update(utilisateur));
+    }
+
+    public void supprimerSalle(Salle salle) {
+        withManager(em -> {
+            new SalleDao(em).delete(salle);
+            return null;
+        });
+    }
+
+    public void supprimerUtilisateur(Utilisateur utilisateur) {
+        withManager(em -> {
+            new UtilisateurDao(em).delete(utilisateur);
+            return null;
+        });
+    }
+
+    public List<Salle> listerSalles() {
+        return withManager(em -> new SalleDao(em).findAll());
+    }
+
+    public List<Utilisateur> listerUtilisateurs() {
+        return withManager(em -> new UtilisateurDao(em).findAll());
+    }
+
     /** Nombre de salles, calculé par COUNT en base. */
-    public long compterSalles() { return withManager(em -> new SalleDao(em).count()); }
+    public long compterSalles() {
+        return withManager(em -> new SalleDao(em).count());
+    }
+
     /** Nombre d'utilisateurs, calculé par COUNT en base. */
-    public long compterUtilisateurs() { return withManager(em -> new UtilisateurDao(em).count()); }
-    public List<Utilisateur> utilisateursParSalle(String nomSalle) { return withManager(em -> new UtilisateurDao(em).findBySalleNom(nomSalle)); }
-    public List<Utilisateur> utilisateursParNom(String fragment) { return withManager(em -> new UtilisateurDao(em).findByNomContains(fragment)); }
-    public List<Salle> sallesParCapaciteMin(int min) { return withManager(em -> new SalleDao(em).findByCapaciteMin(min)); }
-    public List<Salle> sallesParCapaciteSuperieure(int min) { return withManager(em -> new SalleDao(em).findByCapaciteSuperieure(min)); }
+    public long compterUtilisateurs() {
+        return withManager(em -> new UtilisateurDao(em).count());
+    }
+
+    public List<Utilisateur> utilisateursParSalle(String nomSalle) {
+        return withManager(em -> new UtilisateurDao(em).findBySalleNom(nomSalle));
+    }
+
+    public List<Utilisateur> utilisateursParNom(String fragment) {
+        return withManager(em -> new UtilisateurDao(em).findByNomContains(fragment));
+    }
+
+    public List<Salle> sallesParCapaciteMin(int min) {
+        return withManager(em -> new SalleDao(em).findByCapaciteMin(min));
+    }
+
+    public List<Salle> sallesParCapaciteSuperieure(int min) {
+        return withManager(em -> new SalleDao(em).findByCapaciteSuperieure(min));
+    }
+
     /** Ferme le service sans fermer la factory partagée des autres services. */
     public void fermer() {
-        if (closed) return;
+        if (closed) {
+            return;
+        }
         closed = true;
-        if (ownsFactory && emf.isOpen()) emf.close();
+        if (ownsFactory && emf.isOpen()) {
+            emf.close();
+        }
     }
-    @Override public void close() { fermer(); }
+
+    @Override
+    public void close() {
+        fermer();
+    }
 }

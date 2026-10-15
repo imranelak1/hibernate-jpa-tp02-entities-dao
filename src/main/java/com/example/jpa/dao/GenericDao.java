@@ -15,8 +15,10 @@ import java.util.logging.Logger;
  */
 public class GenericDao<T> {
     private static final Logger LOG = Logger.getLogger(GenericDao.class.getName());
+
     private final Class<T> entityClass;
     protected final EntityManager em;
+
     public GenericDao(Class<T> entityClass, EntityManager em) {
         this.entityClass = entityClass;
         this.em = em;
@@ -31,10 +33,14 @@ public class GenericDao<T> {
     }
 
     /** Recherche par identifiant, ou renvoie null si l'entité n'existe pas. */
-    public T find(Object id) { return em.find(entityClass, id); }
+    public T find(Object id) {
+        return em.find(entityClass, id);
+    }
 
     /** Met à jour une entité, même détachée, dans une transaction. */
-    public T update(T entity) { return write(() -> em.merge(entity)); }
+    public T update(T entity) {
+        return write(() -> em.merge(entity));
+    }
 
     /** Supprime une entité et conserve les données si la suppression échoue. */
     public void delete(T entity) {
@@ -46,18 +52,23 @@ public class GenericDao<T> {
 
     /** Liste toutes les entités, dans l'ordre de leurs identifiants. */
     public List<T> findAll() {
-        return em.createQuery("SELECT e FROM " + entityClass.getSimpleName() + " e ORDER BY e.id", entityClass).getResultList();
+        String jpql = "SELECT e FROM " + entityClass.getSimpleName() + " e ORDER BY e.id";
+        return em.createQuery(jpql, entityClass).getResultList();
     }
 
     /** Compte les lignes en base sans charger toute la liste en mémoire. */
     public long count() {
-        return em.createQuery("SELECT COUNT(e) FROM " + entityClass.getSimpleName() + " e", Long.class).getSingleResult();
+        String jpql = "SELECT COUNT(e) FROM " + entityClass.getSimpleName() + " e";
+        return em.createQuery(jpql, Long.class).getSingleResult();
     }
 
     /** Une même gestion begin/commit/rollback pour create, update et delete. */
     private <R> R write(Supplier<R> action) {
         EntityTransaction tx = em.getTransaction();
-        if (tx.isActive()) throw new IllegalStateException("La DAO attend une unite de travail sans transaction active");
+        if (tx.isActive()) {
+            throw new IllegalStateException("La DAO attend une unité de travail sans transaction active");
+        }
+
         try {
             tx.begin();
             R result = action.get();
@@ -66,7 +77,9 @@ public class GenericDao<T> {
             return result;
         } catch (RuntimeException ex) {
             try {
-                if (tx.isActive()) tx.rollback();
+                if (tx.isActive()) {
+                    tx.rollback();
+                }
             } catch (RuntimeException rollbackFailure) {
                 ex.addSuppressed(rollbackFailure);
             }
@@ -76,7 +89,7 @@ public class GenericDao<T> {
             } catch (RuntimeException clearFailure) {
                 ex.addSuppressed(clearFailure);
             }
-            LOG.log(Level.WARNING, "Transaction annulee pour {0}", entityClass.getSimpleName());
+            LOG.log(Level.WARNING, "Transaction annulée pour {0}", entityClass.getSimpleName());
             throw ex;
         }
     }

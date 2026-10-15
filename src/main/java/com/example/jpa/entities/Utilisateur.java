@@ -11,31 +11,69 @@ import javax.persistence.ManyToOne;
 /** Utilisateur dont l'email est unique en base et la salle est facultative. */
 @Entity
 public class Utilisateur {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @Column(nullable = false)
     private String nom;
+
     // La contrainte SQL protège aussi contre les doublons entre deux transactions.
     @Column(nullable = false, unique = true)
     private String email;
-    @ManyToOne @JoinColumn(name = "salle_id")
+
+    @ManyToOne
+    @JoinColumn(name = "salle_id")
     private Salle salle;
-    public Utilisateur() { }
-    public Utilisateur(String nom, String email, Salle salle) { setNom(nom); setEmail(email); setSalle(salle); }
-    public Long getId() { return id; }
-    public String getNom() { return nom; }
+
+    /** Constructeur sans argument utilisé par JPA. */
+    public Utilisateur() {
+    }
+
+    public Utilisateur(String nom, String email, Salle salle) {
+        setNom(nom);
+        setEmail(email);
+        setSalle(salle);
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getNom() {
+        return nom;
+    }
+
     public void setNom(String nom) {
-        if (nom == null || nom.isBlank()) throw new IllegalArgumentException("Le nom est obligatoire");
+        if (nom == null || nom.isBlank()) {
+            throw new IllegalArgumentException("Le nom est obligatoire");
+        }
         this.nom = nom;
     }
-    public String getEmail() { return email; }
+
+    public String getEmail() {
+        return email;
+    }
+
     public void setEmail(String email) {
-        if (email == null || email.isBlank()) throw new IllegalArgumentException("L'email est obligatoire");
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("L'email est obligatoire");
+        }
         this.email = email;
     }
-    public Salle getSalle() { return salle; }
-    public void setSalle(Salle salle) { this.salle = salle; }
-    @Override public String toString() {
-        return "Utilisateur [id=" + id + ", nom=" + nom + ", email=" + email + ", salle=" + (salle == null ? "aucune" : salle.getNom()) + "]";
+
+    public Salle getSalle() {
+        return salle;
+    }
+
+    public void setSalle(Salle salle) {
+        this.salle = salle;
+    }
+
+    @Override
+    public String toString() {
+        String nomSalle = salle == null ? "aucune" : salle.getNom();
+        return "Utilisateur [id=" + id + ", nom=" + nom + ", email=" + email
+                + ", salle=" + nomSalle + "]";
     }
 }

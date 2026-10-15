@@ -5,7 +5,8 @@ import javax.persistence.Persistence;
 
 /** Factory unique de l'application, partagée entre les services. */
 public final class JpaContext {
-    private JpaContext() { }
+    private JpaContext() {
+    }
 
     // Le holder initialise la factory une seule fois, au premier accès.
     private static final class Holder {
@@ -20,6 +21,8 @@ public final class JpaContext {
 
     /** À appeler à l'arrêt de l'application, après la fermeture des services. */
     public static void close() {
-        if (Holder.FACTORY.isOpen()) Holder.FACTORY.close();
+        if (Holder.FACTORY.isOpen()) {
+            Holder.FACTORY.close();
+        }
     }
 }
